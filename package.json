@@ -1,0 +1,25 @@
+{
+  "name": "discord-bot",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "deploy": "bun src/deploy-commands.ts",
+    "deploy:guild": "bun src/deploy-guild.ts",
+    "clear:global": "bun src/clear-global.ts",
+    "clear:all": "bun src/clear-all.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^24.10.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "discord.js": "^14.24.2",
+    "mongoose": "^8.19.3"
+  }
+}
