@@ -7,10 +7,15 @@ import {
   ButtonBuilder,
   ButtonStyle,
   TextChannel,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } from 'discord.js';
 import { Event } from '../../types/event';
 import { Ticket } from '../../database/models/Ticket';
 import { TicketConfig } from '../../database/models/TicketConfig';
+import { VoiceConfig } from '../../database/models/VoiceConfig';
+import { TempVoiceChannel } from '../../database/models/TempVoiceChannel';
 import { createErrorEmbed, createSuccessEmbed } from '../../utils/embeds';
 
 export default {
@@ -65,6 +70,18 @@ export default {
           embeds: [createSuccessEmbed('Annulé', 'La fermeture du ticket a été annulée.')],
           components: [],
         });
+      }
+
+      // Create Voice Channel Button
+      if (interaction.customId === 'create_voice') {
+        await handleCreateVoiceModal(interaction);
+      }
+    }
+
+    // Handle modal submissions
+    if (interaction.isModalSubmit()) {
+      if (interaction.customId === 'voice_name_modal') {
+        await handleVoiceChannelCreation(interaction);
       }
     }
   },
@@ -277,4 +294,137 @@ async function handleConfirmClose(interaction: any) {
   } catch (error) {
     console.error('❌ Error confirming close:', error);
   }
+}
+
+/**
+ * Show modal for voice channel name input
+ */
+async function handleCreateVoiceModal(interaction: any) {
+  try {
+    const modal = new ModalBuilder()
+      .setCustomId('voice_name_modal')
+      .setTitle('Créer un Salon Vocal');
+
+    const nameInput = new TextInputBuilder()
+      .setCustomId('voice_name')
+      .setLabel('Nom du salon')
+      .setPlaceholder('Ex: Gaming, Musique, Discussion...')
+      .setStyle(TextInputStyle.Short)
+      .setMinLength(1)
+      .setMaxLength(50)
+      .setRequired(true);
+
+    const row = new ActionRowBuilder<TextInputBuilder>().addComponents(nameInput);
+    modal.addComponents(row);
+
+    await interaction.showModal(modal);
+  } catch (error) {
+    console.error('Error showing voice modal:', error);
+  }
+}
+
+/**
+ * Handle voice channel creation from modal submission
+ */
+async function handleVoiceChannelCreation(interaction: any) {
+  try {
+    await interaction.deferReply({ ephemeral: true });
+
+    const baseName = interaction.fields.getTextInputValue('voice_name').trim();
+
+    // Get voice configuration
+    const config = await VoiceConfig.findOne({ guildId: interaction.guildId });
+
+    if (!config) {
+      return interaction.editReply({
+        embeds: [createErrorEmbed('Erreur', 'Le système de salons vocaux n\'est pas configuré.')],
+      });
+    }
+
+    // Generate unique channel name
+    const channelName = await generateUniqueVoiceName(interaction.guildId!, baseName);
+
+    // Create the voice channel
+    const channel = await interaction.guild!.channels.create({
+      name: channelName,
+      type: ChannelType.GuildVoice,
+      parent: config.categoryId,
+      userLimit: config.defaultUserLimit,
+      permissionOverwrites: [
+        {
+          id: interaction.user.id,
+          allow: [
+            PermissionFlagsBits.Connect,
+            PermissionFlagsBits.Speak,
+            PermissionFlagsBits.MuteMembers,
+            PermissionFlagsBits.DeafenMembers,
+            PermissionFlagsBits.MoveMembers,
+            PermissionFlagsBits.ManageChannels,
+          ],
+        },
+      ],
+    });
+
+    // Save to database
+    await TempVoiceChannel.create({
+      guildId: interaction.guildId!,
+      channelId: channel.id,
+      creatorId: interaction.user.id,
+      baseName: baseName,
+      createdAt: new Date(),
+    });
+
+    // Move user to the channel if they're in a voice channel
+    const member = interaction.member;
+    if (member?.voice?.channel) {
+      try {
+        await member.voice.setChannel(channel);
+      } catch {
+        // User might have disconnected, ignore
+      }
+    }
+
+    await interaction.editReply({
+      embeds: [
+        createSuccessEmbed(
+          'Salon créé',
+          `Ton salon vocal **${channelName}** a été créé !\n\n` +
+          `Rejoins-le ici: ${channel}\n\n` +
+          '*Le salon sera supprimé automatiquement quand il sera vide.*'
+        ),
+      ],
+    });
+
+    console.log(`🎤 Temp voice channel "${channelName}" created by ${interaction.user.tag}`);
+  } catch (error) {
+    console.error('Error creating voice channel:', error);
+    await interaction.editReply({
+      embeds: [createErrorEmbed('Erreur', 'Une erreur est survenue lors de la création du salon.')],
+    });
+  }
+}
+
+/**
+ * Generate a unique voice channel name with increment if needed
+ */
+async function generateUniqueVoiceName(guildId: string, baseName: string): Promise<string> {
+  const baseChannelName = `Salon-${baseName}`;
+
+  // Find all existing temp channels with the same base name
+  const existing = await TempVoiceChannel.find({ guildId, baseName });
+
+  if (existing.length === 0) {
+    return baseChannelName;
+  }
+
+  // Find the next available number
+  let maxNum = 1;
+  for (const channel of existing) {
+    // The first channel doesn't have a number, so it counts as 1
+    maxNum = Math.max(maxNum, 1);
+  }
+
+  // Check for existing numbered channels in the actual Discord server
+  // by looking at the database entries count
+  return `${baseChannelName}-${existing.length + 1}`;
 }

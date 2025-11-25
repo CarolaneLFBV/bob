@@ -31,6 +31,7 @@ async function main() {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildVoiceStates,
       ],
     }) as Client & { commands: Collection<string, Command> };
 
