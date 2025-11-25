@@ -327,25 +327,32 @@ async function handleCreateVoiceModal(interaction: any) {
  * Handle voice channel creation from modal submission
  */
 async function handleVoiceChannelCreation(interaction: any) {
-  try {
-    await interaction.deferReply({ ephemeral: true });
+  const baseName = interaction.fields.getTextInputValue('voice_name').trim();
+  const guildId = interaction.guildId!;
+  const client = interaction.client;
 
-    const baseName = interaction.fields.getTextInputValue('voice_name').trim();
+  // Get voice configuration FIRST (fast operation)
+  const config = await VoiceConfig.findOne({ guildId }).catch(() => null);
 
-    // Get voice configuration
-    const config = await VoiceConfig.findOne({ guildId: interaction.guildId });
-
-    if (!config) {
-      return interaction.editReply({
+  if (!config) {
+    try {
+      await interaction.reply({
         embeds: [createErrorEmbed('Erreur', 'Le système de salons vocaux n\'est pas configuré.')],
+        ephemeral: true,
       });
+    } catch {
+      // Interaction might have expired, ignore
     }
+    return;
+  }
 
-    // Generate unique channel name
-    const channelName = await generateUniqueVoiceName(interaction.guildId!, baseName);
+  // Generate unique channel name
+  const channelName = await generateUniqueVoiceName(guildId, baseName);
 
-    // Create the voice channel
-    const channel = await interaction.guild!.channels.create({
+  // Create the voice channel IMMEDIATELY (don't wait for interaction response)
+  let channel;
+  try {
+    channel = await interaction.guild!.channels.create({
       name: channelName,
       type: ChannelType.GuildVoice,
       parent: config.categoryId,
@@ -364,43 +371,74 @@ async function handleVoiceChannelCreation(interaction: any) {
         },
       ],
     });
-
-    // Save to database
-    await TempVoiceChannel.create({
-      guildId: interaction.guildId!,
-      channelId: channel.id,
-      creatorId: interaction.user.id,
-      baseName: baseName,
-      createdAt: new Date(),
-    });
-
-    // Move user to the channel if they're in a voice channel
-    const member = interaction.member;
-    if (member?.voice?.channel) {
-      try {
-        await member.voice.setChannel(channel);
-      } catch {
-        // User might have disconnected, ignore
-      }
+  } catch (err) {
+    console.error('Error creating voice channel:', err);
+    try {
+      await interaction.reply({
+        embeds: [createErrorEmbed('Erreur', 'Impossible de créer le salon vocal.')],
+        ephemeral: true,
+      });
+    } catch {
+      // Interaction expired, ignore
     }
+    return;
+  }
 
-    await interaction.editReply({
+  // Save to database
+  await TempVoiceChannel.create({
+    guildId,
+    channelId: channel.id,
+    creatorId: interaction.user.id,
+    baseName,
+    createdAt: new Date(),
+  });
+
+  console.log(`🎤 Temp voice channel "${channelName}" created by ${interaction.user.tag}`);
+
+  // Set up auto-delete IMMEDIATELY after channel creation
+  const channelId = channel.id;
+  setTimeout(async () => {
+    try {
+      const guild = await client.guilds.fetch(guildId).catch(() => null);
+      if (!guild) return;
+
+      const freshChannel = await guild.channels.fetch(channelId).catch(() => null);
+      if (freshChannel && freshChannel.isVoiceBased() && freshChannel.members.size === 0) {
+        await freshChannel.delete('Salon vocal temporaire vide après 2 minutes');
+        await TempVoiceChannel.deleteOne({ channelId });
+        console.log(`🎤 Temp voice channel "${channelName}" deleted (empty after 2 min)`);
+      }
+    } catch (err) {
+      console.error('Error in auto-delete timeout:', err);
+    }
+  }, 2 * 60 * 1000);
+
+  // Move user to the channel if they're in a voice channel
+  const member = interaction.member;
+  if (member?.voice?.channel) {
+    try {
+      await member.voice.setChannel(channel);
+    } catch {
+      // User might have disconnected, ignore
+    }
+  }
+
+  // Try to respond to interaction (might fail if expired, but channel is already created)
+  try {
+    await interaction.reply({
       embeds: [
         createSuccessEmbed(
           'Salon créé',
           `Ton salon vocal **${channelName}** a été créé !\n\n` +
           `Rejoins-le ici: ${channel}\n\n` +
-          '*Le salon sera supprimé automatiquement quand il sera vide.*'
+          '*Le salon sera supprimé automatiquement quand il sera vide ou après 2 minutes sans personne.*'
         ),
       ],
+      ephemeral: true,
     });
-
-    console.log(`🎤 Temp voice channel "${channelName}" created by ${interaction.user.tag}`);
-  } catch (error) {
-    console.error('Error creating voice channel:', error);
-    await interaction.editReply({
-      embeds: [createErrorEmbed('Erreur', 'Une erreur est survenue lors de la création du salon.')],
-    });
+  } catch {
+    // Interaction expired, but channel was created successfully - that's fine
+    console.log(`⚠️ Could not reply to interaction, but channel "${channelName}" was created`);
   }
 }
 
