@@ -3,6 +3,7 @@ import { Event } from '../../types/event';
 import { TempVoiceChannel } from '../../database/models/TempVoiceChannel';
 import { VoiceSession } from '../../database/models/VoiceSession';
 import { VoiceTime } from '../../database/models/VoiceTime';
+import { startStreamChecker } from '../../services/streamChecker';
 
 export default {
   name: 'ready',
@@ -25,6 +26,13 @@ export default {
 
     // Recover voice sessions after restart
     await recoverVoiceSessions(client);
+
+    // Start stream checker (checks every 2 minutes)
+    if (process.env.TWITCH_CLIENT_ID && process.env.TWITCH_CLIENT_SECRET) {
+      startStreamChecker(client, 2 * 60 * 1000);
+    } else {
+      console.log('⚠️  Twitch API not configured - stream notifications disabled');
+    }
   },
 } satisfies Event<'ready'>;
 
