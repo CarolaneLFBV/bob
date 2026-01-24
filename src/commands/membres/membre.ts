@@ -11,6 +11,7 @@ import { createErrorEmbed } from '../../utils/embeds';
 
 // Configuration de l'API
 const API_BASE_URL = 'https://www.lesfousdubus.com/api';
+const SITE_BASE_URL = 'https://www.lesfousdubus.com';
 
 // Interface pour les données membre de l'API
 interface MemberData {
@@ -45,6 +46,29 @@ const SOCIAL_EMOJIS: Record<string, string> = {
 };
 
 /**
+ * Fetch avec timeout
+ */
+async function fetchWithTimeout(url: string, timeout = 2500): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'LFDB-Discord-Bot/1.0',
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+/**
  * Récupère tous les membres depuis l'API (avec cache)
  */
 async function fetchAllMembers(): Promise<MemberData[]> {
@@ -56,12 +80,7 @@ async function fetchAllMembers(): Promise<MemberData[]> {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/members`, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'LFDB-Discord-Bot/1.0',
-      },
-    });
+    const response = await fetchWithTimeout(`${API_BASE_URL}/members`);
 
     if (!response.ok) {
       console.error(`API Error: ${response.status}`);
@@ -83,12 +102,7 @@ async function fetchAllMembers(): Promise<MemberData[]> {
  */
 async function fetchMemberData(slug: string): Promise<MemberData | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/members/slug/${slug}`, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'LFDB-Discord-Bot/1.0',
-      },
-    });
+    const response = await fetchWithTimeout(`${API_BASE_URL}/members/slug/${slug}`, 5000);
 
     if (!response.ok) {
       console.error(`API Error for ${slug}: ${response.status}`);
@@ -253,7 +267,13 @@ export default {
         .setColor(0x9333ea) // Purple LFDB
         .setTitle(`${member.firstName} ${member.lastName}`)
         .setDescription(member.bio || member.shortBio || '*Aucune bio disponible*')
-        .setThumbnail(member.photo || 'https://www.lesfousdubus.com/images/members/default.svg')
+        .setThumbnail(
+          member.photo
+            ? member.photo.startsWith('http')
+              ? member.photo
+              : `${SITE_BASE_URL}${member.photo}`
+            : `${SITE_BASE_URL}/images/members/default.svg`
+        )
         .addFields(
           {
             name: '🎭 Rôle',
