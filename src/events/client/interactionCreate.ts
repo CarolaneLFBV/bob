@@ -16,9 +16,26 @@ import { createErrorEmbed, createSuccessEmbed } from '../../utils/embeds';
 export default {
   name: 'interactionCreate',
   async execute(interaction: Interaction) {
+    const client = interaction.client as any;
+
+    // Handle autocomplete
+    if (interaction.isAutocomplete()) {
+      const command = client.commands?.get(interaction.commandName);
+
+      if (!command?.autocomplete) {
+        return;
+      }
+
+      try {
+        await command.autocomplete(interaction);
+      } catch (error) {
+        console.error(`❌ Error in autocomplete for ${interaction.commandName}:`, error);
+      }
+      return;
+    }
+
     // Handle slash commands
     if (interaction.isChatInputCommand()) {
-      const client = interaction.client as any;
       const command = client.commands?.get(interaction.commandName);
 
       if (!command) {
