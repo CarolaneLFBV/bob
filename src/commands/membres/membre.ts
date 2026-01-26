@@ -1,7 +1,6 @@
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
-  AutocompleteInteraction,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
@@ -27,11 +26,6 @@ interface MemberData {
   socials?: Record<string, string>;
   isActive?: boolean;
 }
-
-// Cache pour les membres (évite de spam l'API)
-let membersCache: MemberData[] = [];
-let cacheTimestamp = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Mapping des icônes pour les réseaux sociaux
 const SOCIAL_EMOJIS: Record<string, string> = {
@@ -65,35 +59,6 @@ async function fetchWithTimeout(url: string, timeout = 2500): Promise<Response> 
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;
-  }
-}
-
-/**
- * Récupère tous les membres depuis l'API (avec cache)
- */
-async function fetchAllMembers(): Promise<MemberData[]> {
-  const now = Date.now();
-
-  // Retourner le cache s'il est encore valide
-  if (membersCache.length > 0 && now - cacheTimestamp < CACHE_DURATION) {
-    return membersCache;
-  }
-
-  try {
-    const response = await fetchWithTimeout(`${API_BASE_URL}/members`);
-
-    if (!response.ok) {
-      console.error(`API Error: ${response.status}`);
-      return membersCache; // Retourner l'ancien cache en cas d'erreur
-    }
-
-    const members = await response.json();
-    membersCache = members.filter((m: MemberData) => m.isActive !== false);
-    cacheTimestamp = now;
-    return membersCache;
-  } catch (error) {
-    console.error('Failed to fetch members:', error);
-    return membersCache;
   }
 }
 
@@ -203,60 +168,54 @@ function createSocialButtons(socials: Record<string, string> | undefined, slug: 
   return rows;
 }
 
+/**
+ * Récupère tous les membres depuis l'API
+ */
+async function fetchAllMembers(): Promise<MemberData[]> {
+  try {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/members`, 5000);
+    if (!response.ok) return [];
+    const members = await response.json();
+    return members.filter((m: MemberData) => m.isActive !== false);
+  } catch (error) {
+    console.error('Failed to fetch members:', error);
+    return [];
+  }
+}
+
 export default {
   data: new SlashCommandBuilder()
     .setName('membre')
     .setDescription('Affiche les informations d\'un membre du collectif LFDB')
     .addStringOption((option) =>
       option
-        .setName('nom')
-        .setDescription('Le membre à afficher')
+        .setName('prenom')
+        .setDescription('Prénom ou pseudo du membre (ex: carolane, zalou)')
         .setRequired(true)
-        .setAutocomplete(true) // Autocomplete dynamique depuis l'API
     ),
 
-  /**
-   * Gère l'autocomplete - récupère les membres depuis l'API
-   */
-  async autocomplete(interaction: AutocompleteInteraction) {
-    const focusedValue = interaction.options.getFocused().toLowerCase();
-
-    try {
-      const members = await fetchAllMembers();
-
-      const filtered = members
-        .filter((member) => {
-          const fullName = `${member.firstName} ${member.lastName}`.toLowerCase();
-          const slug = member.slug.toLowerCase();
-          return fullName.includes(focusedValue) || slug.includes(focusedValue);
-        })
-        .slice(0, 25) // Discord limite à 25 choix
-        .map((member) => ({
-          name: `${member.firstName} ${member.lastName} - ${member.role}`,
-          value: member.slug,
-        }));
-
-      await interaction.respond(filtered);
-    } catch (error) {
-      console.error('Autocomplete error:', error);
-      await interaction.respond([]);
-    }
-  },
-
   async execute(interaction: ChatInputCommandInteraction) {
-    const slug = interaction.options.getString('nom', true);
+    const prenom = interaction.options.getString('prenom', true).toLowerCase();
 
     await interaction.deferReply();
 
     try {
-      const member = await fetchMemberData(slug);
+      // Chercher le membre par prénom ou slug
+      const members = await fetchAllMembers();
+      const search = prenom.toLowerCase();
+
+      const member = members.find(m =>
+        m.firstName.toLowerCase() === search ||
+        m.slug.toLowerCase() === search ||
+        m.slug.toLowerCase().startsWith(search + '-')
+      );
 
       if (!member) {
         return interaction.editReply({
           embeds: [
             createErrorEmbed(
               'Membre introuvable',
-              `Impossible de récupérer les informations pour **${slug}**.\nLe profil n'existe peut-être pas encore sur le site.`
+              `Aucun membre trouvé avec le prénom **${prenom}**.`
             ),
           ],
         });
@@ -300,7 +259,7 @@ export default {
         .setTimestamp();
 
       // Créer les boutons de liens
-      const buttonRows = createSocialButtons(member.socials, slug);
+      const buttonRows = createSocialButtons(member.socials, member.slug);
 
       await interaction.editReply({
         embeds: [embed],
