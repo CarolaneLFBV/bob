@@ -195,6 +195,116 @@ Prochain numéro: #43
 
 ---
 
+## 📱 Espace Dev Mobile
+
+Commandes dédiées à l'écosystème dev iOS / Android / mobile cross-platform.
+
+### `/appstore`
+**Affiche la fiche complète d'une app sur l'App Store**
+
+**Options** :
+| Option | Type | Requis | Description |
+|--------|------|--------|-------------|
+| `nom` | Texte (autocomplétion) | ✅ Oui | Nom de l'app (ex: Spotify, Things 3) |
+| `pays` | Choix | ❌ Non | Store régional (fr, us, gb, ca, jp, de) — défaut: France |
+
+L'embed affiche : icône, dev, note (avec nombre d'avis), prix, catégorie, taille, version, iOS minimum, date de sortie, date de mise à jour, classification d'âge, bundle ID, screenshot principal + bouton vers l'App Store.
+
+**Exemple** : `/appstore nom: Bear pays: us`
+
+---
+
+### `/swift-evolution`
+**Affiche une Swift Evolution Proposal (SE-XXXX)**
+
+**Options** :
+| Option | Type | Requis | Description |
+|--------|------|--------|-------------|
+| `proposal` | Texte (autocomplétion) | ✅ Oui | Numéro ou titre (ex: 401, SE-0401, "if let shorthand") |
+
+L'embed affiche : titre, statut (Accepté / En review / Implémenté / Rejeté…), version Swift cible, auteur·rices, résumé, bugs trackés + bouton vers la proposal complète sur GitHub.
+
+Le flux JSON officiel est mis en cache 1h pour éviter les appels répétés.
+
+**Exemple** : `/swift-evolution proposal: 401`
+
+---
+
+### `/profil`
+**Ton profil dev iOSchool**
+
+Trois sous-commandes pour gérer ton profil et trouver des pairs.
+
+#### `/profil set`
+Ouvre un formulaire (modal) à 5 champs :
+
+| Champ | Type | Requis | Exemples acceptés |
+|---|---|---|---|
+| Niveau | Texte | ✅ | apprenti, junior, confirmé, senior |
+| Techno principale | Texte | ✅ | SwiftUI, UIKit, mixte, autre |
+| Projet en cours | Paragraphe | ❌ | Texte libre (500 car. max) |
+| Je cherche | Texte | ✅ | mentor, mentee, binôme, contrats, discuter |
+| Bio courte | Paragraphe | ❌ | Texte libre (800 car. max) |
+
+Les valeurs des champs *Niveau*, *Techno* et *Je cherche* sont normalisées : peu importe la casse ou les accents, le bot reconnaît la valeur la plus proche.
+
+#### `/profil voir [membre]`
+Affiche le profil de quelqu'un (par défaut: toi).
+
+#### `/profil rechercher [niveau] [techno] [cherche]`
+Trouve des pairs qui matchent. Tous les filtres sont optionnels et combinables.
+
+**Exemple** :
+```
+/profil rechercher techno: SwiftUI cherche: Un·e binôme
+→ liste tous les devs SwiftUI qui cherchent un binôme
+```
+
+---
+
+### 🍎 Welcome DM iOSchool
+
+Lorsqu'un membre obtient le rôle **iOSchool** via l'onboarding natif Discord, le bot lui envoie automatiquement un **DM privé** de bienvenue contenant :
+
+- Un embed personnalisé avec son avatar
+- Un bouton **"Compléter mon profil dev"** qui ouvre directement le modal `/profil set` (fonctionne aussi en DM grâce au `guildId` encodé dans l'interaction)
+- Un bouton **"Voir les commandes dev"** qui détaille les 4 commandes de l'Espace Dev Mobile
+- Un bouton lien **"Site & blog"** vers `carolanelefebvre.com`
+
+Si le membre a fermé ses DMs, l'envoi échoue silencieusement (loggé en warning). Le rôle est tout de même attribué normalement par Discord.
+
+L'ID du rôle iOSchool est configurable dans `src/config/ioschool.ts` (constante `IOSCHOOL_ROLE_ID`).
+
+---
+
+### `/snippet`
+**Bibliothèque communautaire de snippets de code**
+
+Quatre sous-commandes :
+
+#### `/snippet save`
+Ouvre un formulaire (modal) pour sauvegarder un snippet — titre, langage, code. Le snippet reçoit un numéro auto-incrémenté (`#0001`, `#0002`…) et est visible par tous les membres du serveur.
+
+#### `/snippet get <numero>`
+Affiche un snippet existant. Le numéro a une autocomplétion qui propose les snippets récents ou correspondant à ta saisie. Incrémente le compteur de vues.
+
+#### `/snippet list [langage]`
+Liste les 15 snippets les plus récents, optionnellement filtrés par langage (Swift, Kotlin, Dart, TypeScript, JavaScript, Objective-C, Java, Python, JSON, YAML, Shell).
+
+#### `/snippet delete <numero>`
+Supprime un de tes propres snippets (seul l'auteur peut supprimer). Demande confirmation.
+
+**Exemple** :
+```
+/snippet save
+  → Modal s'ouvre →
+    Titre   : SwiftUI: TextField avec validation live
+    Langage : swift
+    Code    : <colle ton code>
+```
+
+---
+
 ## 🎨 Guide des Couleurs Recommandées
 
 Palette "Nature Fresh" utilisée par Bob :

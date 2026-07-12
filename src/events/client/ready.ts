@@ -4,6 +4,8 @@ import { TempVoiceChannel } from '../../database/models/TempVoiceChannel';
 import { VoiceSession } from '../../database/models/VoiceSession';
 import { VoiceTime } from '../../database/models/VoiceTime';
 import { startStreamChecker } from '../../services/streamChecker';
+import { startTechWatchScheduler } from '../../services/techWatch';
+import { startAppleNewsScheduler } from '../../services/appleNews';
 
 export default {
   name: 'ready',
@@ -32,6 +34,12 @@ export default {
       startStreamChecker(client, 2 * 60 * 1000);
     } else {
       console.log('⚠️  Twitch API not configured - stream notifications disabled');
+    }
+
+    // Tech Watch (9h) + Apple News (18h) quotidiens, heure de Paris
+    for (const guild of client.guilds.cache.values()) {
+      startTechWatchScheduler(client, guild.id);
+      startAppleNewsScheduler(client, guild.id);
     }
   },
 } satisfies Event<'ready'>;
