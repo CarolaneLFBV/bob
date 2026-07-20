@@ -177,11 +177,21 @@ async function sendNotification(
       embed.setImage(streamData.thumbnail.replace('{width}', '1280').replace('{height}', '720'));
     }
 
-    const mention = config.mentionRoleId ? `<@&${config.mentionRoleId}>` : '';
+    // Construit la mention : @everyone prioritaire, sinon un rôle, sinon rien.
+    let mention = '';
+    const allowedMentions: { parse: ('everyone' | 'roles')[]; roles?: string[] } = { parse: [] };
+    if (config.mentionEveryone) {
+      mention = '@everyone';
+      allowedMentions.parse.push('everyone');
+    } else if (config.mentionRoleId) {
+      mention = `<@&${config.mentionRoleId}>`;
+      allowedMentions.parse.push('roles');
+    }
 
     await channel.send({
       content: mention || undefined,
       embeds: [embed],
+      allowedMentions,
     });
 
     console.log(`📺 Sent live notification for ${streamer.name} (${streamer.platform})`);

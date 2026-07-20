@@ -14,6 +14,7 @@ export interface IStreamConfig extends Document {
   enabled: boolean;
   announcementChannelId?: string;
   mentionRoleId?: string; // Role to ping when someone goes live
+  mentionEveryone?: boolean; // Ping @everyone when someone goes live
   streamers: IStreamer[];
   defaultMessage: string; // Default message template
   embedColor: string;
@@ -33,6 +34,7 @@ const StreamConfigSchema = new Schema<IStreamConfig>({
   enabled: { type: Boolean, default: true },
   announcementChannelId: { type: String, required: false },
   mentionRoleId: { type: String, required: false },
+  mentionEveryone: { type: Boolean, default: false },
   streamers: { type: [StreamerSchema], default: [] },
   defaultMessage: {
     type: String,
