@@ -147,7 +147,7 @@ export default {
           return interaction.editReply({
             embeds: [createSuccessEmbed(
               'Notifications activées',
-              `Les nouveaux articles et versions de Keepio seront annoncés dans ${channel} avec @here.\n\n` +
+              `Les nouveaux articles et versions de Keepio seront annoncés dans ${channel}, en mentionnant uniquement le rôle correspondant.\n\n` +
               `Articles: ${news ?? 'Aucun'}\nKeepio iOS: ${keepioIos ?? 'Aucun'}\nKeepio Android: ${keepioAndroid ?? 'Aucun'}\n\n` +
               `Version iOS connue: **${config.lastKeepioIosVersion}**\nVersion Android connue: **${androidVersion}**` +
               (warnings.length ? `\n\n${warnings.join('\n')}` : '')
@@ -176,8 +176,8 @@ export default {
             embeds: [createSuccessEmbed(
               'Rôle modifié',
               role
-                ? `Le rôle ${role} sera mentionné avec @here.`
-                : 'Seul @here sera mentionné.'
+                ? `Le rôle ${role} sera mentionné.`
+                : 'Aucun rôle ne sera mentionné : la notification sera postée sans ping.'
             )],
           });
         }
@@ -228,7 +228,7 @@ export default {
               });
             }
             return interaction.editReply({
-              content: `@here ${roleMention(config.newsRoleId)}`,
+              content: roleMention(config.newsRoleId),
               ...buildArticleMessage(article),
               allowedMentions: { parse: [] },
             });
@@ -250,7 +250,7 @@ export default {
               });
             }
             return interaction.editReply({
-              content: `@here ${roleMention(config.keepioAndroidRoleId)}`,
+              content: roleMention(config.keepioAndroidRoleId),
               ...buildKeepioMessage(release),
               allowedMentions: { parse: [] },
             });
@@ -263,7 +263,7 @@ export default {
             });
           }
           return interaction.editReply({
-            content: `@here ${roleMention(config.keepioIosRoleId)}`,
+            content: roleMention(config.keepioIosRoleId),
             ...buildKeepioMessage(release),
             allowedMentions: { parse: [] },
           });

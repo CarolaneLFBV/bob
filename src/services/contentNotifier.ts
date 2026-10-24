@@ -363,7 +363,8 @@ export async function primeNotificationCursors(config: INotificationConfig): Pro
 }
 
 /**
- * Envoie une notification dans le salon des annonces, avec @here + le rôle donné
+ * Envoie une notification dans le salon des annonces. Seul le rôle donné est mentionné :
+ * on ne ping que les membres qui ont choisi ce type de notification (pas de @here).
  */
 async function sendToAnnouncements(
   client: Client,
@@ -379,12 +380,10 @@ async function sendToAnnouncements(
     return;
   }
 
-  const mentions = ['@here', roleId ? `<@&${roleId}>` : ''].filter(Boolean).join(' ');
-
   await channel.send({
-    content: mentions,
+    ...(roleId ? { content: `<@&${roleId}>` } : {}),
     ...message,
-    allowedMentions: { parse: ['everyone'], roles: roleId ? [roleId] : [] },
+    allowedMentions: { parse: [], roles: roleId ? [roleId] : [] },
   });
 }
 

@@ -307,7 +307,7 @@ Supprime un de tes propres snippets (seul l'auteur peut supprimer). Demande conf
 
 ## 📰 Notifications Articles & Keepio
 
-Bob annonce automatiquement dans le salon des annonces, avec `@here` :
+Bob annonce automatiquement dans le salon des annonces, en mentionnant uniquement le rôle concerné (pas de `@here`) :
 - **Nouvel article** sur carolanelefebvre.com (+ `@🍎・Curious`, le rôle des news Apple) — uniquement à la première publication. Les brouillons, mises à jour et republications ne déclenchent rien (Bob lit le champ `announcedAt` des articles dans la base `portfolio`, vérifiée chaque minute).
 - **Nouvelle version de Keepio iOS** sur l'App Store (+ `@Keepio iOS`) — vérifiée toutes les 10 minutes via l'API iTunes. Le cache d'Apple peut retarder la détection de quelques heures après la sortie.
 - **Nouvelle version de Keepio Android** sur Google Play (+ `@Keepio Android`) — vérifiée toutes les 10 minutes via l'API Google Play Developer, piste **production** uniquement (les tests fermés ne sont pas annoncés). La première mise en production sera annoncée.
