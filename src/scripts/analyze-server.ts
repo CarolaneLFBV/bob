@@ -11,14 +11,11 @@ import mongoose from 'mongoose';
 import { WelcomeConfig } from '../database/models/WelcomeConfig';
 import { LevelConfig } from '../database/models/LevelConfig';
 import { UserLevel } from '../database/models/UserLevel';
-import { VoiceTime } from '../database/models/VoiceTime';
 import { VoiceConfig } from '../database/models/VoiceConfig';
-import { StreamConfig } from '../database/models/StreamConfig';
 import { LogConfig } from '../database/models/LogConfig';
-import { Snippet } from '../database/models/Snippet';
 
 const GUILD_ID = '1390017627715403776';
-const EXCLUDED_KEYWORDS = ['ioschool', 'iosschool', 'modération', 'moderation', 'staff', 'admin'];
+const EXCLUDED_KEYWORDS = ['modération', 'moderation', 'staff', 'admin'];
 
 const NOW = Date.now();
 const DAY = 24 * 60 * 60 * 1000;
@@ -61,7 +58,7 @@ async function main() {
   console.log(`   • ${voiceChannels.length} salons vocaux\n`);
 
   // ─── 2. Activité par salon (hors exclus) ───
-  console.log('💬 ACTIVITÉ DES SALONS TEXTE (hors iOSchool / Modération)\n');
+  console.log('💬 ACTIVITÉ DES SALONS TEXTE (hors Modération)\n');
 
   type Activity = {
     name: string;
@@ -181,27 +178,8 @@ async function main() {
   const voiceCfg = await VoiceConfig.findOne({ guildId: GUILD_ID });
   console.log(`   Voice JTC : ${voiceCfg ? '✅ actif' : '❌ non configuré'}`);
 
-  const voiceStats = await VoiceTime.aggregate([
-    { $match: { guildId: GUILD_ID } },
-    { $group: { _id: null, totalMs: { $sum: '$totalTime' }, users: { $sum: 1 } } },
-  ]);
-  if (voiceStats[0]) {
-    const hours = Math.round(voiceStats[0].totalMs / 3_600_000); // totalTime est en millisecondes
-    console.log(`   └─ ${voiceStats[0].users} membres ont passé ${hours}h cumulées en vocal`);
-  }
-
-  const streamCfg = await StreamConfig.findOne({ guildId: GUILD_ID });
-  console.log(
-    `   Stream notif : ${streamCfg ? (streamCfg.enabled ? '✅ actif' : '⚠️ off') : '❌ non configuré'}`
-  );
-
   const logCfg = await LogConfig.findOne({ guildId: GUILD_ID });
   console.log(`   Logs : ${logCfg ? '✅ actif' : '❌ non configuré'}`);
-
-  // Dev features
-  console.log('\n📱 DEV (info)');
-  const snippetCount = await Snippet.countDocuments({ guildId: GUILD_ID });
-  console.log(`   Snippets sauvegardés : ${snippetCount}`);
 
   // ─── 5. Top salons à revitaliser ───
   console.log('\n🚨 SALONS À REVITALISER (les + morts, hors annonces)\n');

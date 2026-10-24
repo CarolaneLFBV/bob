@@ -6,7 +6,6 @@ export interface IUserLevel extends Document {
   xp: number;
   level: number;
   totalMessages: number;
-  voiceXp: number; // XP earned from voice
   messageXp: number; // XP earned from messages
   lastMessageAt: Date; // For cooldown
   updatedAt: Date;
@@ -18,7 +17,6 @@ const UserLevelSchema = new Schema<IUserLevel>({
   xp: { type: Number, default: 0 },
   level: { type: Number, default: 0 },
   totalMessages: { type: Number, default: 0 },
-  voiceXp: { type: Number, default: 0 },
   messageXp: { type: Number, default: 0 },
   lastMessageAt: { type: Date, default: new Date(0) },
   updatedAt: { type: Date, default: Date.now },

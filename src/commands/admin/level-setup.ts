@@ -46,9 +46,6 @@ export default {
           opt.setName('message_max').setDescription('XP maximum par message').setMinValue(1).setMaxValue(100)
         )
         .addIntegerOption((opt) =>
-          opt.setName('voice').setDescription('XP par minute en vocal').setMinValue(1).setMaxValue(50)
-        )
-        .addIntegerOption((opt) =>
           opt.setName('cooldown').setDescription('Cooldown entre messages en secondes').setMinValue(0).setMaxValue(300)
         )
     )
@@ -161,19 +158,16 @@ export default {
         case 'xp': {
           const msgMin = interaction.options.getInteger('message_min');
           const msgMax = interaction.options.getInteger('message_max');
-          const voice = interaction.options.getInteger('voice');
           const cooldown = interaction.options.getInteger('cooldown');
 
           if (msgMin !== null) config.xpPerMessage.min = msgMin;
           if (msgMax !== null) config.xpPerMessage.max = msgMax;
-          if (voice !== null) config.xpPerMinuteVoice = voice;
           if (cooldown !== null) config.messageCooldown = cooldown;
 
           await config.save();
           return interaction.editReply({
             embeds: [createSuccessEmbed('XP configuré', `
 **Messages:** ${config.xpPerMessage.min}-${config.xpPerMessage.max} XP
-**Vocal:** ${config.xpPerMinuteVoice} XP/min
 **Cooldown:** ${config.messageCooldown}s
             `)],
           });
@@ -277,7 +271,6 @@ export default {
 **Salon d'annonce:** ${config.announcementChannelId ? `<#${config.announcementChannelId}>` : 'Même salon'}
 
 **XP par message:** ${config.xpPerMessage.min}-${config.xpPerMessage.max}
-**XP par minute vocal:** ${config.xpPerMinuteVoice}
 **Cooldown:** ${config.messageCooldown}s
 
 **Message level-up:**

@@ -2,29 +2,15 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
 } from 'discord.js';
 import { Command } from '../../types/command';
 import { UserLevel } from '../../database/models/UserLevel';
-import { VoiceTime } from '../../database/models/VoiceTime';
 import { LevelConfig } from '../../database/models/LevelConfig';
 import { formatNumber } from '../../utils/levels';
 import { createErrorEmbed } from '../../utils/embeds';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 const PAGE_SIZE = 10;
-
-function formatDuration(ms: number): string {
-  const hours = Math.floor(ms / (1000 * 60 * 60));
-  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-  return `${minutes}m`;
-}
 
 export default {
   data: new SlashCommandBuilder()
@@ -34,14 +20,6 @@ export default {
       sub
         .setName('xp')
         .setDescription('Classement par XP/Niveau')
-        .addIntegerOption((opt) =>
-          opt.setName('page').setDescription('Page du classement').setMinValue(1)
-        )
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName('voice')
-        .setDescription('Classement par temps en vocal')
         .addIntegerOption((opt) =>
           opt.setName('page').setDescription('Page du classement').setMinValue(1)
         )
@@ -123,58 +101,6 @@ export default {
           const embed = new EmbedBuilder()
             .setColor('#FFD700')
             .setTitle('🏆 Classement XP')
-            .setDescription(leaderboardLines.join('\n\n'))
-            .setFooter({ text: `Page ${page}/${totalPages || 1} • Ton rang: #${userRank}` })
-            .setTimestamp();
-
-          return interaction.editReply({ embeds: [embed] });
-        }
-
-        case 'voice': {
-          const totalUsers = await VoiceTime.countDocuments({ guildId: interaction.guildId });
-          const totalPages = Math.ceil(totalUsers / PAGE_SIZE);
-
-          if (page > totalPages && totalPages > 0) {
-            return interaction.editReply({
-              embeds: [createErrorEmbed('Page invalide', `Il n'y a que ${totalPages} page(s).`)],
-            });
-          }
-
-          const users = await VoiceTime.find({ guildId: interaction.guildId })
-            .sort({ totalTime: -1 })
-            .skip(skip)
-            .limit(PAGE_SIZE);
-
-          if (users.length === 0) {
-            return interaction.editReply({
-              embeds: [createErrorEmbed('Aucune donnée', 'Personne n\'a encore de temps vocal.')],
-            });
-          }
-
-          const leaderboardLines = await Promise.all(
-            users.map(async (user, index) => {
-              const rank = skip + index + 1;
-              const medal = rank <= 3 ? MEDALS[rank - 1] : `\`${rank}.\``;
-              const member = await guild.members.fetch(user.userId).catch(() => null);
-              const name = member?.displayName || 'Utilisateur inconnu';
-
-              return `${medal} **${name}**\n┗ 🎤 ${formatDuration(user.totalTime)}`;
-            })
-          );
-
-          // Find user's rank
-          const userVoiceTime = await VoiceTime.findOne({
-            guildId: interaction.guildId,
-            userId: interaction.user.id,
-          });
-          const userRank = await VoiceTime.countDocuments({
-            guildId: interaction.guildId,
-            totalTime: { $gt: userVoiceTime?.totalTime || 0 },
-          }) + 1;
-
-          const embed = new EmbedBuilder()
-            .setColor('#3498DB')
-            .setTitle('🎤 Classement Temps Vocal')
             .setDescription(leaderboardLines.join('\n\n'))
             .setFooter({ text: `Page ${page}/${totalPages || 1} • Ton rang: #${userRank}` })
             .setTimestamp();

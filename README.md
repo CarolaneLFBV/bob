@@ -1,6 +1,6 @@
 # 🤖 Discord Bot - TypeScript + Bun
 
-Bot Discord moderne avec système de bienvenue et ticketing, développé avec TypeScript, Bun et MongoDB.
+Bot Discord communautaire développé avec TypeScript, Bun et MongoDB.
 
 ## ✨ Fonctionnalités
 
@@ -11,13 +11,24 @@ Bot Discord moderne avec système de bienvenue et ticketing, développé avec Ty
 - Avatar de l'utilisateur et compteur de membres
 - Images personnalisables et couleurs d'embed
 
-### 🎫 Système de Ticketing
-- Panneau persistant avec bouton de création
-- Création automatique de canaux privés (`ticket-0001`, `ticket-0002`, etc.)
-- Ping automatique du rôle support
-- Système de confirmation pour fermeture
-- Un ticket par utilisateur maximum
-- Permissions automatiques (utilisateur + support + bot)
+### 🎤 Salons vocaux temporaires
+- Création automatique d'un salon en rejoignant le salon dédié
+- Déplacement du membre dans son salon et suppression lorsque le salon est vide
+- Limite de participants réglable par le créateur avec `/voice-limit`
+
+### 🏆 Niveaux et classements
+- XP gagnés grâce aux messages, avec délai configurable entre deux gains
+- Rôles récompenses et annonces de passage de niveau
+- `/rank`, `/leaderboard xp` et `/leaderboard messages`
+- Les totaux d'XP déjà acquis sont conservés
+
+### 📰 Veilles quotidiennes
+- Tech Watch : Ars Technica, TechCrunch, Lobsters et GitHub Trending
+- Apple News : MacRumors, 9to5Mac et Apple Newsroom
+- Publication à 9 h, heure de Paris ; salons définis dans `src/config/`
+
+La commande `/logs-setup` configure les journaux d’activité. Les gestionnaires présents dans `src/events/logs/` sur cette installation sont ignorés par Git : ils doivent être conservés lors du déploiement. Certains événements nécessitent les intents Discord correspondants.
+Voir [COMMANDS.md](COMMANDS.md) pour le détail des commandes.
 
 ## 🚀 Installation
 
@@ -103,25 +114,6 @@ bun run start
 - `{user.mention}` : Mention de l'utilisateur
 - `{server}` : Nom du serveur
 - `{memberCount}` : Nombre total de membres
-
-### Configuration du système de ticketing
-
-```
-/ticket-panel
-  panel-channel: #ticket-support
-  category: Support
-  support-role: @Support
-```
-
-Cela créera un panneau permanent dans `#ticket-support` avec un bouton pour créer des tickets.
-
-**Workflow du ticket** :
-1. L'utilisateur clique sur "🎫 Créer un Ticket"
-2. Un canal privé est créé automatiquement (`ticket-0001`)
-3. Le rôle support est pingé dans le nouveau ticket
-4. L'utilisateur et le support peuvent communiquer
-5. Fermeture via le bouton "🔒 Fermer le Ticket"
-6. Confirmation requise avant suppression
 
 ## 🏗️ Structure du projet
 

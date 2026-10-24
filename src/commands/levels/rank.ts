@@ -97,11 +97,6 @@ export default {
             inline: true,
           },
           {
-            name: '🎤 XP Vocal',
-            value: formatNumber(userLevel.voiceXp),
-            inline: true,
-          },
-          {
             name: '📝 XP Messages',
             value: formatNumber(userLevel.messageXp),
             inline: true,

@@ -1,9 +1,6 @@
 import { Client, ActivityType } from 'discord.js';
 import { Event } from '../../types/event';
 import { TempVoiceChannel } from '../../database/models/TempVoiceChannel';
-import { VoiceSession } from '../../database/models/VoiceSession';
-import { VoiceTime } from '../../database/models/VoiceTime';
-import { startStreamChecker } from '../../services/streamChecker';
 import { startTechWatchScheduler } from '../../services/techWatch';
 import { startAppleNewsScheduler } from '../../services/appleNews';
 import { startContentNotifier } from '../../services/contentNotifier';
@@ -20,24 +17,14 @@ export default {
 
     // Set bot status
     client.user.setPresence({
-      activities: [{ name: 'les tickets 🎫', type: ActivityType.Watching }],
+      activities: [{ name: 'la communauté', type: ActivityType.Watching }],
       status: 'online',
     });
 
     // Cleanup stale temp voice channels on startup
     await cleanupStaleVoiceChannels(client);
 
-    // Recover voice sessions after restart
-    await recoverVoiceSessions(client);
-
-    // Start stream checker (checks every 2 minutes)
-    if (process.env.TWITCH_CLIENT_ID && process.env.TWITCH_CLIENT_SECRET) {
-      startStreamChecker(client, 2 * 60 * 1000);
-    } else {
-      console.log('⚠️  Twitch API not configured - stream notifications disabled');
-    }
-
-    // Tech Watch (9h) + Apple News (18h) quotidiens, heure de Paris
+    // Tech Watch et Apple News quotidiens à 9h, heure de Paris
     for (const guild of client.guilds.cache.values()) {
       startTechWatchScheduler(client, guild.id);
       startAppleNewsScheduler(client, guild.id);
@@ -92,98 +79,4 @@ async function cleanupStaleVoiceChannels(client: Client) {
   } catch (error) {
     console.error('Error cleaning up stale voice channels:', error);
   }
-}
-
-/**
- * Recover voice sessions after bot restart
- * - Finalize sessions for users no longer in voice
- * - Create sessions for users currently in voice without a session
- */
-async function recoverVoiceSessions(client: Client) {
-  try {
-    // Get all active sessions from database
-    const activeSessions = await VoiceSession.find({});
-    let recovered = 0;
-    let synced = 0;
-
-    // Process each session
-    for (const session of activeSessions) {
-      try {
-        const guild = await client.guilds.fetch(session.guildId).catch(() => null);
-        if (!guild) {
-          // Guild no longer accessible, finalize session
-          await finalizeSession(session);
-          recovered++;
-          continue;
-        }
-
-        const member = await guild.members.fetch(session.userId).catch(() => null);
-        if (!member || !member.voice.channelId) {
-          // User is no longer in voice, finalize session
-          await finalizeSession(session);
-          recovered++;
-        }
-        // If user is still in voice, keep the session (timer continues from original start)
-      } catch {
-        // Error processing session, finalize it to be safe
-        await finalizeSession(session);
-        recovered++;
-      }
-    }
-
-    // Sync: Create sessions for users currently in voice without a session
-    for (const guild of client.guilds.cache.values()) {
-      for (const channel of guild.channels.cache.values()) {
-        if (!channel.isVoiceBased()) continue;
-
-        for (const member of channel.members.values()) {
-          if (member.user.bot) continue;
-
-          // Check if session exists
-          const existingSession = await VoiceSession.findOne({
-            guildId: guild.id,
-            userId: member.id,
-          });
-
-          if (!existingSession) {
-            // Create a new session starting from now
-            await VoiceSession.create({
-              guildId: guild.id,
-              userId: member.id,
-              channelId: channel.id,
-              startedAt: new Date(),
-            });
-            synced++;
-          }
-        }
-      }
-    }
-
-    if (recovered > 0) {
-      console.log(`🔄 Recovered ${recovered} voice session(s) from previous run`);
-    }
-    if (synced > 0) {
-      console.log(`🔄 Synced ${synced} active voice user(s)`);
-    }
-  } catch (error) {
-    console.error('Error recovering voice sessions:', error);
-  }
-}
-
-/**
- * Finalize a voice session by adding time to user's total
- */
-async function finalizeSession(session: any) {
-  const duration = Date.now() - session.startedAt.getTime();
-
-  await VoiceTime.findOneAndUpdate(
-    { guildId: session.guildId, userId: session.userId },
-    {
-      $inc: { totalTime: duration },
-      $set: { updatedAt: new Date() },
-    },
-    { upsert: true }
-  );
-
-  await VoiceSession.deleteOne({ _id: session._id });
 }

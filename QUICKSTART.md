@@ -6,7 +6,7 @@
 
 1. Allez sur https://discord.com/developers/applications
 2. Cliquez sur "New Application"
-3. Nommez votre bot (ex: "My Support Bot")
+3. Nommez votre bot (ex: "Mon Bot Communautaire")
 4. Allez dans l'onglet "Bot"
 5. Cliquez sur "Reset Token" et **copiez le token** (vous ne pourrez le voir qu'une fois !)
 
@@ -81,8 +81,8 @@ bun run deploy
 Vous devriez voir :
 ```
 ✅ Loaded command: welcome-setup
-✅ Loaded command: ticket-panel
-✅ Successfully deployed 2 global commands!
+✅ Loaded command: voice-setup
+✅ Successfully deployed 10 global commands!
 ```
 
 ### 3. Lancer le bot
@@ -94,8 +94,7 @@ bun run dev
 Vous devriez voir :
 ```
 ✅ MongoDB connected successfully
-✅ Loaded 2 commands
-✅ Loaded 3 events
+✅ Loaded 10 commands
 ✅ Logged in as YourBot#1234
 ```
 
@@ -114,21 +113,6 @@ Vous devriez voir :
   mention: true
 ```
 
-### Configurer le système de ticketing
-
-1. Créez une catégorie "Support" sur votre serveur
-2. Créez un rôle `@Support` (ou utilisez un rôle existant)
-3. Créez un canal texte `#ticket-support`
-4. Utilisez la commande :
-```
-/ticket-panel
-  panel-channel: #ticket-support
-  category: Support
-  support-role: @Support
-```
-
-Un panneau apparaîtra dans `#ticket-support` avec un bouton pour créer des tickets !
-
 ## ✅ Test du bot
 
 ### Tester le système de bienvenue
@@ -136,14 +120,6 @@ Un panneau apparaîtra dans `#ticket-support` avec un bouton pour créer des tic
 1. Créez un compte Discord secondaire (ou demandez à un ami)
 2. Invitez ce compte sur votre serveur de test
 3. Le message de bienvenue devrait apparaître dans `#bienvenue`
-
-### Tester le système de ticketing
-
-1. Allez dans `#ticket-support`
-2. Cliquez sur le bouton "🎫 Créer un Ticket"
-3. Un nouveau canal privé `ticket-0001` devrait apparaître
-4. Le rôle `@Support` devrait être pingé
-5. Testez la fermeture avec le bouton "🔒 Fermer le Ticket"
 
 ## 🐛 Dépannage
 
@@ -164,12 +140,6 @@ Un panneau apparaîtra dans `#ticket-support` avec un bouton pour créer des tic
 - Vérifiez que l'intent "Server Members" est activé dans le Discord Developer Portal
 - Vérifiez que la configuration existe avec `/welcome-setup`
 - Vérifiez que le canal existe toujours
-
-### Les tickets ne se créent pas
-
-- Vérifiez que le bot a la permission "Manage Channels"
-- Vérifiez que la catégorie existe
-- Regardez les logs pour les erreurs
 
 ## 📚 Prochaines étapes
 

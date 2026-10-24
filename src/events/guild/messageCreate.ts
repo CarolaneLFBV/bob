@@ -41,7 +41,6 @@ export default {
           xp: 0,
           level: 0,
           totalMessages: 0,
-          voiceXp: 0,
           messageXp: 0,
           lastMessageAt: new Date(0),
         });

@@ -2,155 +2,18 @@ import { VoiceState, ChannelType, PermissionFlagsBits } from 'discord.js';
 import { Event } from '../../types/event';
 import { TempVoiceChannel } from '../../database/models/TempVoiceChannel';
 import { VoiceConfig } from '../../database/models/VoiceConfig';
-import { VoiceSession } from '../../database/models/VoiceSession';
-import { VoiceTime } from '../../database/models/VoiceTime';
-import { UserLevel } from '../../database/models/UserLevel';
-import { LevelConfig } from '../../database/models/LevelConfig';
-import { levelFromXp } from '../../utils/levels';
 
 export default {
   name: 'voiceStateUpdate',
   async execute(oldState: VoiceState, newState: VoiceState) {
-    const userId = newState.member?.id || oldState.member?.id;
-    const guildId = newState.guild?.id || oldState.guild?.id;
-
-    if (!userId || !guildId) return;
-
-    // Ignore bots
+    // Ignore bots and changes that do not move the member between channels.
     if (newState.member?.user.bot || oldState.member?.user.bot) return;
+    if (oldState.channelId === newState.channelId) return;
 
-    const oldChannelId = oldState.channelId;
-    const newChannelId = newState.channelId;
-
-    // User joined a voice channel (wasn't in one before)
-    if (!oldChannelId && newChannelId) {
-      await handleVoiceJoin(guildId, userId, newChannelId);
-      await handleJoinToCreate(newState);
-    }
-
-    // User left a voice channel (no longer in one)
-    if (oldChannelId && !newChannelId) {
-      await handleVoiceLeave(guildId, userId);
-      await handleTempChannelCleanup(oldState);
-    }
-
-    // User switched channels
-    if (oldChannelId && newChannelId && oldChannelId !== newChannelId) {
-      // Update the channel in the session, don't reset the timer
-      await VoiceSession.findOneAndUpdate(
-        { guildId, userId },
-        { channelId: newChannelId }
-      );
-      await handleJoinToCreate(newState);
-      await handleTempChannelCleanup(oldState);
-    }
+    if (newState.channelId) await handleJoinToCreate(newState);
+    if (oldState.channelId) await handleTempChannelCleanup(oldState);
   },
 } satisfies Event<'voiceStateUpdate'>;
-
-/**
- * Handle user joining a voice channel - start tracking time
- */
-async function handleVoiceJoin(guildId: string, userId: string, channelId: string) {
-  try {
-    // Create or update session (upsert in case of stale session)
-    await VoiceSession.findOneAndUpdate(
-      { guildId, userId },
-      { channelId, startedAt: new Date() },
-      { upsert: true }
-    );
-  } catch (error) {
-    console.error('Error starting voice session:', error);
-  }
-}
-
-/**
- * Handle user leaving a voice channel - add time to total and XP
- */
-async function handleVoiceLeave(guildId: string, userId: string) {
-  try {
-    // Find and delete the session
-    const session = await VoiceSession.findOneAndDelete({ guildId, userId });
-
-    if (!session) return;
-
-    // Calculate duration
-    const duration = Date.now() - session.startedAt.getTime();
-
-    // Add to total time
-    await VoiceTime.findOneAndUpdate(
-      { guildId, userId },
-      {
-        $inc: { totalTime: duration },
-        $set: { updatedAt: new Date() },
-      },
-      { upsert: true }
-    );
-
-    // Calculate and add voice XP
-    await addVoiceXp(guildId, userId, duration);
-
-    // Log for debugging
-    const minutes = Math.floor(duration / 60000);
-    const seconds = Math.floor((duration % 60000) / 1000);
-    console.log(`🎤 ${userId} spent ${minutes}m ${seconds}s in voice (guild: ${guildId})`);
-  } catch (error) {
-    console.error('Error ending voice session:', error);
-  }
-}
-
-/**
- * Add XP for time spent in voice
- */
-async function addVoiceXp(guildId: string, userId: string, duration: number) {
-  try {
-    // Check if level system is enabled
-    const config = await LevelConfig.findOne({ guildId });
-    if (!config?.enabled) return;
-
-    // Calculate XP (duration is in ms, config is XP per minute)
-    const minutes = duration / 60000;
-    const xpGain = Math.floor(minutes * config.xpPerMinuteVoice);
-
-    if (xpGain <= 0) return;
-
-    // Get or create user level data
-    let userLevel = await UserLevel.findOne({ guildId, userId });
-
-    if (!userLevel) {
-      userLevel = new UserLevel({
-        guildId,
-        userId,
-        xp: 0,
-        level: 0,
-        totalMessages: 0,
-        voiceXp: 0,
-        messageXp: 0,
-        lastMessageAt: new Date(0),
-      });
-    }
-
-    const oldLevel = userLevel.level;
-
-    // Update user data
-    userLevel.xp += xpGain;
-    userLevel.voiceXp += xpGain;
-    userLevel.level = levelFromXp(userLevel.xp);
-    userLevel.updatedAt = new Date();
-
-    await userLevel.save();
-
-    // Log XP gain
-    console.log(`🎤 ${userId} earned ${xpGain} XP from voice (${Math.floor(minutes)}min)`);
-
-    // Note: Level up announcements for voice would need a channel reference
-    // For now, we just update the level silently
-    if (userLevel.level > oldLevel) {
-      console.log(`🎉 ${userId} leveled up to ${userLevel.level} from voice!`);
-    }
-  } catch (error) {
-    console.error('Error adding voice XP:', error);
-  }
-}
 
 /**
  * Handle Join to Create - create a new temp channel when user joins the JTC channel

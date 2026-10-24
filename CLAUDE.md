@@ -67,19 +67,6 @@ Each command file exports a default object satisfying the `Command` interface.
 This single event handler manages ALL user interactions:
 
 1. **Slash Commands** - Routes to appropriate command from `client.commands` Collection
-2. **Button Interactions** - Handles ticket system buttons by `customId`:
-   - `create_ticket` - Creates new ticket channel with permissions
-   - `close_ticket` - Shows confirmation prompt
-   - `confirm_close` - Deletes ticket channel after 5s delay
-   - `cancel_close` - Cancels ticket closure
-
-**Button Flow Pattern:**
-```
-User clicks button → interactionCreate event fires → customId check → handler function
-```
-
-All button handlers are defined in the same file for ticket-related interactions.
-
 ### Database Models (MongoDB + Mongoose)
 
 **Per-Guild Configuration Pattern:**
@@ -89,14 +76,6 @@ All models use `guildId` as the primary identifier to support multi-server deplo
 - **WelcomeConfig** - Welcome message settings (one per guild)
   - `guildId: string` (unique)
   - Dynamic variable support: `{user}`, `{user.mention}`, `{server}`, `{memberCount}`
-
-- **TicketConfig** - Ticket system settings (one per guild)
-  - `guildId: string` (unique)
-  - `ticketCounter: number` - Auto-incrementing ticket numbers
-
-- **Ticket** - Individual ticket records
-  - `guildId: string` + `userId: string` - Enforces one open ticket per user
-  - `status: 'open' | 'closed'`
 
 **MongoDB Connection:** Auto-loads from `MONGODB_URI` environment variable. Supports both local MongoDB and MongoDB Atlas cloud.
 
@@ -139,33 +118,6 @@ Welcome messages support dynamic variables (`src/utils/embeds.ts:replaceVariable
 ```
 
 Variables are replaced at runtime in both title and description fields.
-
-### Ticket System Architecture
-
-**Ticket Creation Flow:**
-
-1. Admin creates panel with `/ticket-panel` → Creates persistent button in specified channel
-2. User clicks "🎫 Créer un Ticket" button
-3. System checks for existing open ticket (one per user limit)
-4. Creates new channel with format `ticket-####` (auto-incrementing)
-5. Sets permissions:
-   - Default: Deny everyone
-   - User: View + Send + Read History + Attach Files
-   - Bot: View + Send + Manage Channels
-   - Support Role (if configured): View + Send + Read History + Attach Files
-6. Sends embed with close button and pings support role
-7. Saves ticket to database with status "open"
-
-**Ticket Closure Flow:**
-
-1. User/Staff clicks "🔒 Fermer le Ticket"
-2. Shows confirmation prompt (ephemeral message)
-3. If confirmed:
-   - Updates database status to "closed"
-   - Sends final message
-   - Deletes channel after 5 second delay
-
-**Key Design Decision:** Tickets are channels, not threads. This provides better permission control and separation.
 
 ### Color Palette
 

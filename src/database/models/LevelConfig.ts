@@ -12,7 +12,6 @@ export interface ILevelConfig extends Document {
   ignoredChannels: string[]; // Channels where XP is not earned
   ignoredRoles: string[]; // Roles that don't earn XP
   xpPerMessage: { min: number; max: number }; // Random XP range per message
-  xpPerMinuteVoice: number; // XP per minute in voice
   messageCooldown: number; // Cooldown in seconds between XP gains from messages
   levelUpMessage: string; // Custom level-up message
   rewards: ILevelReward[]; // Role rewards for reaching levels
@@ -29,7 +28,6 @@ const LevelConfigSchema = new Schema<ILevelConfig>({
     min: { type: Number, default: 15 },
     max: { type: Number, default: 25 },
   },
-  xpPerMinuteVoice: { type: Number, default: 10 },
   messageCooldown: { type: Number, default: 60 }, // 60 seconds
   levelUpMessage: {
     type: String,
