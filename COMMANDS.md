@@ -305,6 +305,50 @@ Supprime un de tes propres snippets (seul l'auteur peut supprimer). Demande conf
 
 ---
 
+## 📰 Notifications Articles & Keepio
+
+Bob annonce automatiquement dans le salon des annonces, avec `@here` :
+- **Nouvel article** sur carolanelefebvre.com (+ `@🍎・Curious`, le rôle des news Apple) — uniquement à la première publication. Les brouillons, mises à jour et republications ne déclenchent rien (Bob lit le champ `announcedAt` des articles dans la base `portfolio`, vérifiée chaque minute).
+- **Nouvelle version de Keepio iOS** sur l'App Store (+ `@Keepio iOS`) — vérifiée toutes les 10 minutes via l'API iTunes. Le cache d'Apple peut retarder la détection de quelques heures après la sortie.
+- **Nouvelle version de Keepio Android** sur Google Play (+ `@Keepio Android`) — vérifiée toutes les 10 minutes via l'API Google Play Developer, piste **production** uniquement (les tests fermés ne sont pas annoncés). La première mise en production sera annoncée.
+
+**Configuration Android** (`.env.local`) :
+1. Google Cloud Console : activer l'API *Google Play Android Developer*, créer un compte de service et télécharger sa clé JSON.
+2. Play Console → Utilisateurs et autorisations : inviter l'e-mail du compte de service avec l'autorisation *Afficher les informations sur l'application* sur Keepio.
+3. Renseigner `GOOGLE_PLAY_SERVICE_ACCOUNT_FILE` (chemin de la clé JSON, jamais commitée) et `KEEPIO_ANDROID_PACKAGE` (nom de package de Keepio), puis relancer `/notif-setup enable`.
+
+### `/notif-setup`
+**Configurer les notifications**
+
+**Permissions requises** : Gérer le serveur
+
+**Sous-commandes** :
+| Sous-commande | Description |
+|---------------|-------------|
+| `enable channel:` | Active les notifications dans ce salon. Rôles utilisés : `@🍎・Curious` (articles), `Keepio iOS` et `Keepio Android` |
+| `disable` | Désactive les notifications |
+| `role type: role:` | Change le rôle mentionné pour les articles, Keepio iOS ou Keepio Android |
+| `preview type:` | Affiche la notification du dernier article / de la version iOS ou Android actuelle / l'annonce de lancement, visible par vous seul et sans ping |
+| `announce [channel:]` | Poste l'annonce de lancement (avec @here) expliquant les notifications et renvoyant vers Channels & Roles pour prendre `@🍎・Curious`, Keepio iOS et Keepio Android |
+| `status` | Affiche la configuration |
+
+**Exemples** :
+```
+/notif-setup enable channel:#📢・annonces
+/notif-setup preview type:Dernier article
+```
+
+À l'activation, le dernier article et les versions actuelles de Keepio (iOS et Android) sont mémorisés : seules les publications suivantes sont annoncées.
+
+**Depuis le serveur (sans Discord)** — même logique que `/notif-setup` :
+```bash
+bun src/scripts/notif-setup-now.ts check [--channel=<id>]   # diagnostic : MongoDB, App Store, Google Play, rôles, permissions
+bun src/scripts/notif-setup-now.ts enable --channel=<id>    # activation
+bun src/scripts/notif-setup-now.ts announce --yes           # annonce de lancement (@here)
+```
+
+---
+
 ## 🎨 Guide des Couleurs Recommandées
 
 Palette "Nature Fresh" utilisée par Bob :
@@ -379,6 +423,7 @@ Bob a besoin de ces permissions pour fonctionner correctement :
 - ✅ Ajouter des réactions
 - ✅ Gérer les salons (pour les tickets)
 - ✅ Gérer les rôles (pour les permissions de tickets)
+- ✅ Mentionner @everyone, @here et tous les rôles (pour les notifications d'articles et de Keepio)
 
 **Intents activés** :
 - ✅ Presence Intent

@@ -6,6 +6,7 @@ import { VoiceTime } from '../../database/models/VoiceTime';
 import { startStreamChecker } from '../../services/streamChecker';
 import { startTechWatchScheduler } from '../../services/techWatch';
 import { startAppleNewsScheduler } from '../../services/appleNews';
+import { startContentNotifier } from '../../services/contentNotifier';
 
 export default {
   name: 'ready',
@@ -41,6 +42,9 @@ export default {
       startTechWatchScheduler(client, guild.id);
       startAppleNewsScheduler(client, guild.id);
     }
+
+    // Start new article / Keepio release notifications
+    startContentNotifier(client);
   },
 } satisfies Event<'ready'>;
 
