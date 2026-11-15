@@ -3,6 +3,7 @@ import { connectDatabase } from './database/connection';
 import { loadCommands } from './handlers/commandHandler';
 import { loadEvents } from './handlers/eventHandler';
 import { Command } from './types/command';
+import { startMemoryReport } from './utils/memoryReport';
 
 // Validate environment variables
 function validateEnv() {
@@ -24,6 +25,8 @@ async function main() {
 
     // Connect to MongoDB
     await connectDatabase();
+
+    startMemoryReport();
 
     // Create Discord client
     const client = new Client({

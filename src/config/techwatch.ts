@@ -17,23 +17,22 @@ export const TECHWATCH_POST_WINDOW_MINUTES = 5;
 export const TECHWATCH_HN_COUNT = 3;
 export const TECHWATCH_GITHUB_COUNT = 3;
 
+const PARIS_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
+  timeZone: 'Europe/Paris',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
 /**
  * Convertit "maintenant" en heure de Paris et retourne le numéro de jour ISO (YYYY-MM-DD)
  * et l'heure/minute en Europe/Paris. Permet de gérer correctement été/hiver.
  */
 export function getParisNow(): { date: string; hour: number; minute: number } {
-  const now = new Date();
-  const formatter = new Intl.DateTimeFormat('fr-FR', {
-    timeZone: 'Europe/Paris',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(now);
+  const parts = PARIS_FORMATTER.formatToParts(new Date());
   const get = (type: string) => parts.find(p => p.type === type)?.value ?? '00';
 
   return {
